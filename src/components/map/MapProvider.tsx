@@ -17,6 +17,23 @@ interface GoogleMapProviderProps {
   onBoundsChanged: (bounds: google.maps.LatLngBounds) => void;  // 지도 경계 변경 핸들러
 }
 
+// 컴포넌트 상단에 한 번만 생성
+const MARKER_ICON_URL = "data:image/svg+xml;charset=UTF-8," + 
+  encodeURIComponent(`
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="12" fill="#3B82F6" stroke="white" strokeWidth="3"/>
+      <circle cx="16" cy="16" r="4" fill="white"/>
+    </svg>
+  `);
+
+const MARKER_ICON_URL_SELECTED = "data:image/svg+xml;charset=UTF-8," + 
+  encodeURIComponent(`
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="12" fill="#DC2626" stroke="white" strokeWidth="3"/>
+      <circle cx="16" cy="16" r="4" fill="white"/>
+    </svg>
+  `);
+
 export default function GoogleMapProvider({
   stores,
   center,
@@ -36,6 +53,7 @@ export default function GoogleMapProvider({
 
   // Google Maps 초기화
   useEffect(() => {
+    console.log('[0. 구글맵 초기화] 시작');
     const initMap = async () => {
       const loader = new Loader({
         apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -82,6 +100,7 @@ export default function GoogleMapProvider({
 
   // 지도 이벤트 리스너
   useEffect(() => {
+    console.log('[*. 지도 이벤트 리스너] 시작');
     if (!map) return
 
     let boundsChangeTimeout: NodeJS.Timeout;
@@ -122,7 +141,13 @@ export default function GoogleMapProvider({
 
   // 마커 생성 및 클러스터링
   useEffect(() => {
+    console.log('[1. 마커 생성 및 클러스터링] 시작');
     if (!map || !map.getProjection()) return;
+
+    // 측정 시작
+    performance.mark('markers-start');
+    const startTime = performance.now();
+    console.log(`[성능] 마커 생성 시작 - stores: ${stores.length}개`);
 
     // 현재 마커들을 Map으로 변환 (빠른 조회를 위해)
     const currentMarkerMap = new Map<string, google.maps.Marker>(
@@ -145,6 +170,13 @@ export default function GoogleMapProvider({
     const storesToAdd = stores.filter(store => 
       !currentMarkerMap.has(store.uuid)
     );
+
+    // 마커 icon
+    const MARKER_ICON = {
+      url: MARKER_ICON_URL,
+      scaledSize: new google.maps.Size(32, 32),
+      anchor: new google.maps.Point(16, 16),
+    };
     
     // 3. 새 마커만 생성
     const newMarkers = storesToAdd.map(store => {
@@ -152,18 +184,8 @@ export default function GoogleMapProvider({
         position: { lat: store.latitude, lng: store.longitude },
         title: store.uuid,
         map: map,
-        icon: {  // 커스텀 SVG 아이콘
-          url:
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="12" fill="#3B82F6" stroke="white" strokeWidth="3"/>
-              <circle cx="16" cy="16" r="4" fill="white"/>
-            </svg>
-          `),
-          scaledSize: new google.maps.Size(32, 32),  // 아이콘 크기
-          anchor: new google.maps.Point(16, 16),  // 아이콘 기준점 (중앙)
-        },
+        icon: MARKER_ICON,
+        optimized: true,
       });
       
       marker.addListener("click", () => {
@@ -184,6 +206,26 @@ export default function GoogleMapProvider({
     
     markersRef.current = Array.from(currentMarkerMap.values());
     
+    performance.mark('markers-end');
+    const endTime = performance.now();
+
+    // 마커 객체 생성 완료 (현재 측정 지점)
+    const creationTime = performance.now() - startTime;
+    console.log(`[성능] 마커 객체 생성: ${creationTime.toFixed(2)}ms`);
+
+    // 실제 렌더링 완료 시점 측정
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // 두 프레임 후 = 실제로 화면에 그려진 후
+        const totalTime = performance.now() - startTime;
+        console.log(`[성능] 화면 렌더링 완료: ${totalTime.toFixed(2)}ms`);
+        console.log(`[성능] 렌더링 지연: ${(totalTime - creationTime).toFixed(2)}ms`);
+      });
+    });
+    
+    // 클러스터링 측정
+    performance.mark('cluster-start');
+
     // 5. 클러스터러 업데이트
     if (clustererRef.current) {
       clustererRef.current.clearMarkers();
@@ -193,7 +235,7 @@ export default function GoogleMapProvider({
       clustererRef.current = new MarkerClusterer({
         map,
         markers: markersRef.current,
-        algorithm: new GridAlgorithm({ gridSize: 60, maxZoom: 16 }),
+        algorithm: new GridAlgorithm({ gridSize: 60, maxZoom: 17 }),
         renderer: {
           render: ({ count, position }) => {
             const color = count > 10 ? "#DC2626" : count > 5 ? "#F59E0B" : "#3B82F6";
@@ -222,6 +264,12 @@ export default function GoogleMapProvider({
         },
       });
     }
+
+    performance.mark('cluster-end');
+    performance.measure('clustering', 'cluster-start', 'cluster-end');
+    const clusterDuration = performance.now() - endTime;
+    console.log(`  - 클러스터링: ${clusterDuration.toFixed(2)}ms`);
+
     return () => {
       try {
         if (clustererRef.current) {
@@ -240,6 +288,7 @@ export default function GoogleMapProvider({
 
   // 선택된 가게 정보로 인포윈도우 표시
   useEffect(() => {
+    console.log('[*. 인포윈도우] 표시');
     if (!map || !infoWindow) return;
 
     if (!selectedStore) {
@@ -281,6 +330,7 @@ export default function GoogleMapProvider({
 
   // 지도 상태 동기화 (중심점 변경 시 지도 이동)
   useEffect(() => {
+    console.log('[지도 상태 동기화(중심점)] 시작');
     if (map && center) {
       map.panTo(new google.maps.LatLng(center.lat, center.lng));  // 중심점 변경 시 지도 이동
     }
@@ -288,6 +338,7 @@ export default function GoogleMapProvider({
 
   // 지도 상태 동기화  (줌 레벨 변경 시 지도 이동)
   useEffect(() => {
+    console.log('[지도 상태 동기화(줌 레벨)] 시작');
     if (map && zoom) {
       map.setZoom(zoom);
     }
@@ -295,6 +346,7 @@ export default function GoogleMapProvider({
 
   // 선택된 상점 마커 강조
   useEffect(() => {
+    console.log('[마커 상태 강조] 시작');
     if (!selectedStore || !markersRef.current.length) return
 
     markersRef.current.forEach((marker) => {
@@ -315,6 +367,7 @@ export default function GoogleMapProvider({
   }, [selectedStore])
 
   useEffect(() => {
+    console.log('[범위 체크] 시작');
     if (!map || !selectedStore) return;
 
     const checkBounds = () => {
