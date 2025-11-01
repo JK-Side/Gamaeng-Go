@@ -2,12 +2,12 @@
 
 import { RefObject } from "react";
 
-interface GoogleMapDisplayProps {
+interface MapDisplayProps {
   mapRef: RefObject<HTMLDivElement | null>;
   apiKeyExists: boolean;
 }
 
-export default function GoogleMapDisplay({ mapRef, apiKeyExists }: GoogleMapDisplayProps) {
+export default function MapDisplay({ mapRef, apiKeyExists }: MapDisplayProps) {
   return (
     <div className="w-full h-full">
       <div ref={mapRef} className="w-full h-full" />

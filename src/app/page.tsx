@@ -1,11 +1,17 @@
 'use client'
+
 import { Button } from "@/components/ui/button"
 import { Navigation, PanelLeftClose, PanelLeftOpen } from "lucide-react"
-import GoogleMap from "@/components/map/MapProvider"
 import { useStores } from "@/hooks/use-stores"
 import { StoreSidebar } from "@/components/map/StoreSidebar"
-import { useState, useEffect } from "react"
-import { Store, SimpleStore } from "@/types"
+import { useState } from "react"
+import dynamic from "next/dynamic";
+
+// ssr 방지
+const GoogleMapProvider = dynamic(
+  () => import("@/components/map/MapProvider"),
+  { ssr: false }
+);
 
 export default function MapApp() {
   const {
@@ -62,7 +68,7 @@ export default function MapApp() {
             <PanelLeftOpen className="h-4 w-4" />
           )}
         </Button>
-        <GoogleMap
+        <GoogleMapProvider
           stores={markerStores}
           center={mapCenter}
           selectedStore={selectedStore}
