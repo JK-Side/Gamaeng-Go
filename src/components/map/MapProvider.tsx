@@ -17,7 +17,9 @@ interface GoogleMapProviderProps {
   onBoundsChanged: (bounds: google.maps.LatLngBounds) => void;  // 지도 경계 변경 핸들러
 }
 
-// 컴포넌트 상단에 한 번만 생성
+// 많은 재생성을 피하기 위해 Map을 ref로 유지
+const markerMapRef = useRef<Map<string, google.maps.Marker>>(new Map());
+
 const MARKER_ICON_URL = "data:image/svg+xml;charset=UTF-8," + 
   encodeURIComponent(`
     <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -33,6 +35,18 @@ const MARKER_ICON_URL_SELECTED = "data:image/svg+xml;charset=UTF-8," +
       <circle cx="16" cy="16" r="4" fill="white"/>
     </svg>
   `);
+
+  const MARKER_ICON = {
+  url: MARKER_ICON_URL,
+  scaledSize: new google.maps.Size(32, 32),
+  anchor: new google.maps.Point(16, 16),
+};
+
+const MARKER_ICON_SELECTED = {
+  url: MARKER_ICON_URL_SELECTED,
+  scaledSize: new google.maps.Size(40, 40),
+  anchor: new google.maps.Point(20, 20),
+};
 
 export default function GoogleMapProvider({
   stores,
@@ -149,10 +163,7 @@ export default function GoogleMapProvider({
     const startTime = performance.now();
     console.log(`[성능] 마커 생성 시작 - stores: ${stores.length}개`);
 
-    // 현재 마커들을 Map으로 변환 (빠른 조회를 위해)
-    const currentMarkerMap = new Map<string, google.maps.Marker>(
-      markersRef.current.map(marker => [marker.getTitle() || '', marker])
-    );
+    const currentMarkerMap = markerMapRef.current;
 
     // 새로운 stores의 UUID Set
     const newStoreIds = new Set<string>(stores.map(store => store.uuid));
@@ -170,20 +181,13 @@ export default function GoogleMapProvider({
     const storesToAdd = stores.filter(store => 
       !currentMarkerMap.has(store.uuid)
     );
-
-    // 마커 icon
-    const MARKER_ICON = {
-      url: MARKER_ICON_URL,
-      scaledSize: new google.maps.Size(32, 32),
-      anchor: new google.maps.Point(16, 16),
-    };
     
     // 3. 새 마커만 생성
     const newMarkers = storesToAdd.map(store => {
       const marker = new google.maps.Marker({
         position: { lat: store.latitude, lng: store.longitude },
         title: store.uuid,
-        map: map,
+        map: null,
         icon: MARKER_ICON,
         optimized: true,
       });
