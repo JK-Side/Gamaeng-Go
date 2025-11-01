@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { GridAlgorithm, MarkerClusterer } from "@googlemaps/markerclusterer";
 import { SimpleStore, Store } from "@/types";
@@ -28,9 +28,17 @@ const createClusterIcon = (color: string) => ({
   anchor: new google.maps.Point(20, 20),
 });
 
-const CLUSTER_ICON_LARGE = createClusterIcon("#DC2626");  // 빨강 (10개 초과)
-const CLUSTER_ICON_MEDIUM = createClusterIcon("#F59E0B"); // 주황 (5-10개)
-const CLUSTER_ICON_SMALL = createClusterIcon("#3B82F6");  // 파랑 (5개 이하)
+const createClusterIconUrl = (color: string) => 
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(`
+    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" strokeWidth="3"/>
+    </svg>
+  `);
+
+const CLUSTER_ICON_URL_LARGE = createClusterIconUrl("#DC2626"); // 빨강 (10개 초과)
+const CLUSTER_ICON_URL_MEDIUM = createClusterIconUrl("#F59E0B"); // 주황 (5-10개)
+const CLUSTER_ICON_URL_SMALL = createClusterIconUrl("#3B82F6");  // 파랑 (5개 이하)
 
 const MARKER_ICON_URL = "data:image/svg+xml;charset=UTF-8," + 
   encodeURIComponent(`
@@ -47,18 +55,6 @@ const MARKER_ICON_URL_SELECTED = "data:image/svg+xml;charset=UTF-8," +
       <circle cx="16" cy="16" r="4" fill="white"/>
     </svg>
   `);
-
-  const MARKER_ICON = {
-  url: MARKER_ICON_URL,
-  scaledSize: new google.maps.Size(32, 32),
-  anchor: new google.maps.Point(16, 16),
-};
-
-const MARKER_ICON_SELECTED = {
-  url: MARKER_ICON_URL_SELECTED,
-  scaledSize: new google.maps.Size(40, 40),
-  anchor: new google.maps.Point(20, 20),
-};
 
 export default function GoogleMapProvider({
   stores,
@@ -79,6 +75,36 @@ export default function GoogleMapProvider({
   const clustererRef = useRef<MarkerClusterer | null>(null);
   
   const [infoWindow, setInfoWindow] = useState<google.maps.InfoWindow | null>(null);
+
+  const MARKER_ICON = useMemo(() => ({
+    url: MARKER_ICON_URL,
+    scaledSize: new google.maps.Size(32, 32),
+    anchor: new google.maps.Point(16, 16),
+  }), []);
+
+  const MARKER_ICON_SELECTED = useMemo(() => ({
+    url: MARKER_ICON_URL_SELECTED,
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 20),
+  }), []);
+
+  const CLUSTER_ICON_LARGE = useMemo(() => ({
+    url: CLUSTER_ICON_URL_LARGE,
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 20),
+  }), []);
+
+  const CLUSTER_ICON_MEDIUM = useMemo(() => ({
+    url: CLUSTER_ICON_URL_MEDIUM,
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 20),
+  }), []);
+
+  const CLUSTER_ICON_SMALL = useMemo(() => ({
+    url: CLUSTER_ICON_URL_SMALL,
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 20),
+  }), []);
 
   // Google Maps 초기화
   useEffect(() => {
