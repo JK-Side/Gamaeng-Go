@@ -17,9 +17,6 @@ interface GoogleMapProviderProps {
   onBoundsChanged: (bounds: google.maps.LatLngBounds) => void;  // 지도 경계 변경 핸들러
 }
 
-// 많은 재생성을 피하기 위해 Map을 ref로 유지
-const markerMapRef = useRef<Map<string, google.maps.Marker>>(new Map());
-
 const createClusterIcon = (color: string) => ({
   url: "data:image/svg+xml;charset=UTF-8," +
     encodeURIComponent(`
@@ -73,6 +70,9 @@ export default function GoogleMapProvider({
   onBoundsChanged,
   onZoomChanged,
 }: GoogleMapProviderProps) {
+  // 많은 재생성을 피하기 위해 Map을 ref로 유지
+  const markerMapRef = useRef<Map<string, google.maps.Marker>>(new Map());
+
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
