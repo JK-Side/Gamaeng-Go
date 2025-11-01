@@ -20,6 +20,21 @@ interface GoogleMapProviderProps {
 // 많은 재생성을 피하기 위해 Map을 ref로 유지
 const markerMapRef = useRef<Map<string, google.maps.Marker>>(new Map());
 
+const createClusterIcon = (color: string) => ({
+  url: "data:image/svg+xml;charset=UTF-8," +
+    encodeURIComponent(`
+      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" strokeWidth="3"/>
+      </svg>
+    `),
+  scaledSize: new google.maps.Size(40, 40),
+  anchor: new google.maps.Point(20, 20),
+});
+
+const CLUSTER_ICON_LARGE = createClusterIcon("#DC2626");  // 빨강 (10개 초과)
+const CLUSTER_ICON_MEDIUM = createClusterIcon("#F59E0B"); // 주황 (5-10개)
+const CLUSTER_ICON_SMALL = createClusterIcon("#3B82F6");  // 파랑 (5개 이하)
+
 const MARKER_ICON_URL = "data:image/svg+xml;charset=UTF-8," + 
   encodeURIComponent(`
     <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -242,28 +257,23 @@ export default function GoogleMapProvider({
         algorithm: new GridAlgorithm({ gridSize: 60, maxZoom: 17 }),
         renderer: {
           render: ({ count, position }) => {
-            const color = count > 10 ? "#DC2626" : count > 5 ? "#F59E0B" : "#3B82F6";
-            return new google.maps.Marker({
-              position,
-              icon: {
-                url:
-                  "data:image/svg+xml;charset=UTF-8," +
-                  encodeURIComponent(`
-                  <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" strokeWidth="3"/>
-                  </svg>
-                `),
-                scaledSize: new google.maps.Size(40, 40),
-                anchor: new google.maps.Point(20, 20),
-              },
-              label: {
-                text: count.toString(),
-                color: "white",
-                fontSize: "12px",
-                fontWeight: "bold",
-              },
-              zIndex: 1000,
-            });
+            const icon = count > 10 
+            ? CLUSTER_ICON_LARGE 
+            : count > 5 
+            ? CLUSTER_ICON_MEDIUM 
+            : CLUSTER_ICON_SMALL;
+
+          return new google.maps.Marker({
+            position,
+            icon,
+            label: {
+              text: count.toString(),
+              color: "white",
+              fontSize: "12px",
+              fontWeight: "bold",
+            },
+            zIndex: 1000,
+          });
           },
         },
       });
@@ -355,18 +365,7 @@ export default function GoogleMapProvider({
 
     markersRef.current.forEach((marker) => {
       const isSelected = marker.getTitle() === selectedStore.uuid;
-      marker.setIcon({
-        url:
-          "data:image/svg+xml;charset=UTF-8," +
-          encodeURIComponent(`
-          <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="16" cy="16" r="12" fill="${isSelected ? "#DC2626" : "#3B82F6"}" stroke="white" strokeWidth="3"/>
-            <circle cx="16" cy="16" r="4" fill="white"/>
-          </svg>
-        `),
-        scaledSize: new google.maps.Size(isSelected ? 40 : 32, isSelected ? 40 : 32),
-        anchor: new google.maps.Point(isSelected ? 20 : 16, isSelected ? 20 : 16),
-      });
+      marker.setIcon(MARKER_ICON_SELECTED);
     });
   }, [selectedStore])
 
