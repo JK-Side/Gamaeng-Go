@@ -73,21 +73,42 @@ export default function MapProvider({
   
   const [infoWindow, setInfoWindow] = useState<google.maps.InfoWindow | null>(null);
 
-  const MARKER_ICON = useMemo(() => ({
-    url: MARKER_ICON_URL,
-    scaledSize: new google.maps.Size(32, 32),
-    anchor: new google.maps.Point(16, 16),
-  }), []);
+  const MARKER_ICON = useMemo(() => {
+    if (typeof window === "undefined" || typeof google === "undefined") return null;
+    return {
+      url: MARKER_ICON_URL,
+      scaledSize: new google.maps.Size(32, 32),
+      anchor: new google.maps.Point(16, 16),
+    };
+  }, []);
 
-  const MARKER_ICON_SELECTED = useMemo(() => ({
-    url: MARKER_ICON_URL_SELECTED,
-    scaledSize: new google.maps.Size(40, 40),
-    anchor: new google.maps.Point(20, 20),
-  }), []);
+  const MARKER_ICON_SELECTED = useMemo(() => {
+    if (typeof window === "undefined" || typeof google === "undefined") return null;
+    return {
+      url: MARKER_ICON_URL_SELECTED,
+      scaledSize: new google.maps.Size(40, 40),
+      anchor: new google.maps.Point(20, 20),
+    }
+  }, []);
 
-  const CLUSTER_ICON_LARGE = useMemo(() => CLUSTER_ICON_URL_LARGE, []);
-  const CLUSTER_ICON_MEDIUM = useMemo(() => CLUSTER_ICON_URL_MEDIUM, []);
-  const CLUSTER_ICON_SMALL = useMemo(() => CLUSTER_ICON_URL_SMALL, []);
+  const CLUSTER_ICON_LARGE = useMemo(() => {
+    if (typeof window === "undefined" || typeof google === "undefined") {
+      return null;
+    }
+    return CLUSTER_ICON_URL_LARGE;
+  }, []);
+  const CLUSTER_ICON_MEDIUM = useMemo(() => {
+    if (typeof window === "undefined" || typeof google === "undefined") {
+      return null;
+    }
+    return CLUSTER_ICON_URL_MEDIUM;
+  }, []);
+  const CLUSTER_ICON_SMALL = useMemo(() => {
+    if (typeof window === "undefined" || typeof google === "undefined") {
+      return null;
+    }
+    return CLUSTER_ICON_URL_SMALL;
+  }, []);
 
   // Google Maps 초기화
   useEffect(() => {
